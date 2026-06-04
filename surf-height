@@ -1,0 +1,45 @@
+#!/bin/bash
+
+
+spotId="5842041f4e65fad6a7708906"
+spotName="Porto"
+query_frequency=1800
+cache="/tmp/$(basename $0):${spotName,,}"
+cache=${cache// /_}
+max_attempts=12
+
+
+
+queryAPI() {
+	for ((attempt=1; attempt<=$max_attempts; attempt++)); do
+		timeout 5 curl -s \
+			-H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+			-H "Accept: application/json" \
+			-H "Referer: https://www.surfline.com/" \
+			"https://services.surfline.com/kbyg/spots/reports?spotId=$spotId" 2>/dev/null \
+			| jq -r '.forecast.waveHeight | "'"$spotName"': \(.min)-\(.max)\(if .plus then "+" else "" end)"' 2>/dev/null \
+			&& return 0
+		sleep $((attempt * 1 + RANDOM % 2)).$((RANDOM % 10))s
+	done
+	echo "$spotName: failed"
+	return 1
+}
+
+
+okayToQuery() {
+	local cache_age=$(( $(date +%s) - $(date -r "$cache" +%s) ))
+	if [[ ! -s "$cache" ]] || (( cache_age >= query_frequency )); then
+		return 0
+	fi
+	return 1
+}
+
+
+
+[[ ! -s "$cache" ]] && >"$cache"
+
+if okayToQuery; then
+	queryAPI | tee "$cache"
+else
+	cat "$cache"
+fi
