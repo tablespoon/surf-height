@@ -6,7 +6,7 @@ spotName="Porto"
 query_frequency=1800
 cache="/tmp/$(basename $0):${spotName,,}"
 cache=${cache// /_}
-max_attempts=12
+max_attempts=20
 
 
 
